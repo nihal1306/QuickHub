@@ -60,6 +60,7 @@ struct FileDockPanel: View {
                         .foregroundColor(.secondary)
                 }
             }
+            .frame(height: 240) // Make panel active areas uniform
             .padding()
             
             Spacer()
@@ -71,8 +72,10 @@ struct FileDockPanel: View {
 
 // MARK: - Camera Panel
 struct CameraPanel: View {
+    @StateObject private var cameraManager = CameraManager()
+    
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Header
             HStack {
                 Image(systemName: "camera.fill")
@@ -80,29 +83,105 @@ struct CameraPanel: View {
                     .foregroundColor(.green)
                 Text("Camera")
                     .font(.headline)
+                
                 Spacer()
+                
+                // Privacy indicator
+                if cameraManager.isCameraOn {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                        Text("Active")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .padding(.horizontal)
             .padding(.top)
             
-            // Camera preview placeholder
+            // Camera preview or placeholder
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(0.9))
-                
-                VStack(spacing: 12) {
-                    Image(systemName: "video.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.green.opacity(0.7))
-                    Text("Camera Preview")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text("Coming soon")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.5))
+                if let previewLayer = cameraManager.previewLayer, cameraManager.isCameraOn {
+                    // Live camera feed
+                    CameraView(previewLayer: previewLayer)
+                        .cornerRadius(12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.green.opacity(0.3), lineWidth: 2)
+                        )
+                } else {
+                    // Placeholder when camera is off
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.black.opacity(0.9))
+                        .overlay(
+                            VStack(spacing: 12) {
+                                Image(systemName: cameraManager.hasCamera ? "video.slash.fill" : "video.slash")
+                                    .font(.system(size: 48))
+                                    .foregroundColor(.white.opacity(0.5))
+                                
+                                Text(cameraManager.hasCamera ? "Camera Off" : "No Camera")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.7))
+                                
+                                if let error = cameraManager.errorMessage {
+                                    Text(error)
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.5))
+                                        .multilineTextAlignment(.center)
+                                        .padding(.horizontal)
+                                }
+                            }
+                        )
                 }
             }
-            .padding()
+            .frame(height: 240)
+            .padding(.horizontal)
+            
+            // Controls
+            HStack(spacing: 12) {
+                // Camera toggle button
+                Button(action: {
+                    cameraManager.toggleCamera()
+                }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: cameraManager.isCameraOn ? "video.fill" : "video.slash.fill")
+                        Text(cameraManager.isCameraOn ? "Turn Off" : "Turn On")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(cameraManager.isCameraOn ? Color.red : Color.green)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .disabled(!cameraManager.hasCamera)
+                
+                // Mirror toggle button
+                if cameraManager.isCameraOn {
+                    Button(action: {
+                        cameraManager.toggleMirror()
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.left.and.right")
+                            Text(cameraManager.isMirrored ? "Mirrored" : "Normal")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.green)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.green.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
             
             Spacer()
         }
@@ -110,8 +189,6 @@ struct CameraPanel: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
 }
-
-// MARK: - Notepad Panel
 // MARK: - Notepad Panel
 struct NotepadPanel: View {
     @State private var noteText = """
@@ -175,6 +252,7 @@ Type and watch the **live syntax highlighting** ✨
             if showPreview {
                 // Rendered preview
                 LiveMarkdownPreview(text: noteText)
+                    .frame(height: 240)
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
@@ -185,6 +263,7 @@ Type and watch the **live syntax highlighting** ✨
             } else {
                 // Live markdown editor with syntax highlighting
                 LiveMarkdownEditor(text: $noteText)
+                    .frame(height: 240)
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
