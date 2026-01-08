@@ -112,11 +112,35 @@ struct CameraPanel: View {
 }
 
 // MARK: - Notepad Panel
+// MARK: - Notepad Panel
 struct NotepadPanel: View {
-    @State private var noteText = "Start typing your notes here..."
+    @State private var noteText = """
+# Welcome to QuickHub Notes
+
+## Markdown Features
+- **Bold text** with double asterisks
+- *Italic text* with single asterisks  
+- `Inline code` with backticks
+- > Blockquotes with >
+
+## Lists
+1. Numbered items
+2. Work great
+3. Try it out!
+
+- Bullet points
+- Also supported
+- With live highlighting!
+
+## Try It
+Type and watch the **live syntax highlighting** ✨
+
+[Links work too](https://github.com)
+"""
+    @State private var showPreview = false
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Header
             HStack {
                 Image(systemName: "doc.text.fill")
@@ -125,34 +149,97 @@ struct NotepadPanel: View {
                 Text("Scratchpad")
                     .font(.headline)
                 Spacer()
+                
+                // Mode indicator
+                HStack(spacing: 8) {
+                    // Preview toggle
+                    Button(action: { showPreview.toggle() }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: showPreview ? "eye.slash.fill" : "eye.fill")
+                            Text(showPreview ? "Edit" : "Preview")
+                        }
+                        .font(.caption)
+                        .foregroundColor(showPreview ? .secondary : .orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(showPreview ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal)
             .padding(.top)
             
-            // Text editor
-            TextEditor(text: $noteText)
-                .font(.system(size: 14))
-                .padding(8)
-                .background(Color(NSColor.textBackgroundColor))
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
-                .padding(.horizontal)
+            // Content area - LIVE EDITING
+            if showPreview {
+                // Rendered preview
+                LiveMarkdownPreview(text: noteText)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+            } else {
+                // Live markdown editor with syntax highlighting
+                LiveMarkdownEditor(text: $noteText)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding(.horizontal)
+            }
             
-            // Footer
-            HStack {
-                Text("\(noteText.count) characters")
-                    .font(.caption)
+            // Footer with stats
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: "character")
+                        .font(.caption2)
+                    Text("\(noteText.count)")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                
+                Text("•")
                     .foregroundColor(.secondary)
+                    .font(.caption)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "text.alignleft")
+                        .font(.caption2)
+                    Text("\(noteText.split(separator: "\n").count)")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                
+                Text("•")
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "doc.text")
+                        .font(.caption2)
+                    Text("\(noteText.split(separator: " ").count) words")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                
                 Spacer()
-                Button("Clear") {
-                    noteText = ""
+                
+                Button(action: { noteText = "" }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "trash")
+                            .font(.caption2)
+                        Text("Clear")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.orange)
                 }
                 .buttonStyle(.plain)
-                .font(.caption)
-                .foregroundColor(.orange)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
