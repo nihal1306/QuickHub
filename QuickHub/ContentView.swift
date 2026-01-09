@@ -26,8 +26,8 @@ struct ContentView: View {
 // MARK: - File Dock Panel
 struct FileDockPanel: View {
     var body: some View {
-        VStack(spacing: 16) {
-            // Header
+        VStack(spacing: 0) {
+            // Header - Fixed height
             HStack {
                 Image(systemName: "folder.fill")
                     .font(.title2)
@@ -36,10 +36,10 @@ struct FileDockPanel: View {
                     .font(.headline)
                 Spacer()
             }
+            .frame(height: 44)
             .padding(.horizontal)
-            .padding(.top)
             
-            // Drop zone
+            // Drop zone - Larger, fills space
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.blue.opacity(0.1))
@@ -60,8 +60,9 @@ struct FileDockPanel: View {
                         .foregroundColor(.secondary)
                 }
             }
-            .frame(height: 240) // Make panel active areas uniform
-            .padding()
+            .frame(height: 280)
+            .padding(.horizontal)
+            .padding(.top, 8)
             
             Spacer()
         }
@@ -75,8 +76,8 @@ struct CameraPanel: View {
     @StateObject private var cameraManager = CameraManager()
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Header
+        VStack(spacing: 0) {
+            // Header - Fixed height
             HStack {
                 Image(systemName: "camera.fill")
                     .font(.title2)
@@ -98,10 +99,10 @@ struct CameraPanel: View {
                     }
                 }
             }
+            .frame(height: 44)
             .padding(.horizontal)
-            .padding(.top)
             
-            // Camera preview or placeholder
+            // Camera preview - Larger
             ZStack {
                 if let previewLayer = cameraManager.previewLayer, cameraManager.isCameraOn {
                     // Live camera feed
@@ -136,10 +137,11 @@ struct CameraPanel: View {
                         )
                 }
             }
-            .frame(height: 240)
+            .frame(height: 280)
             .padding(.horizontal)
+            .padding(.top, 8)
             
-            // Controls
+            // Controls - Fixed height
             HStack(spacing: 12) {
                 // Camera toggle button
                 Button(action: {
@@ -180,8 +182,9 @@ struct CameraPanel: View {
                 
                 Spacer()
             }
+            .frame(height: 40)
             .padding(.horizontal)
-            .padding(.bottom, 8)
+            .padding(.top, 8)
             
             Spacer()
         }
@@ -189,6 +192,7 @@ struct CameraPanel: View {
         .background(Color(NSColor.controlBackgroundColor))
     }
 }
+
 // MARK: - Notepad Panel
 struct NotepadPanel: View {
     @State private var noteText = """
@@ -217,8 +221,8 @@ Type and watch the **live syntax highlighting** ✨
     @State private var showPreview = false
     
     var body: some View {
-        VStack(spacing: 12) {
-            // Header
+        VStack(spacing: 0) {
+            // Header - Fixed height
             HStack {
                 Image(systemName: "doc.text.fill")
                     .font(.title2)
@@ -227,32 +231,28 @@ Type and watch the **live syntax highlighting** ✨
                     .font(.headline)
                 Spacer()
                 
-                // Mode indicator
-                HStack(spacing: 8) {
-                    // Preview toggle
-                    Button(action: { showPreview.toggle() }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: showPreview ? "eye.slash.fill" : "eye.fill")
-                            Text(showPreview ? "Edit" : "Preview")
-                        }
-                        .font(.caption)
-                        .foregroundColor(showPreview ? .secondary : .orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(showPreview ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
-                        .cornerRadius(6)
+                // Mode toggle
+                Button(action: { showPreview.toggle() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showPreview ? "eye.slash.fill" : "eye.fill")
+                        Text(showPreview ? "Edit" : "Preview")
                     }
-                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundColor(showPreview ? .secondary : .orange)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(showPreview ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
+                    .cornerRadius(6)
                 }
+                .buttonStyle(.plain)
             }
+            .frame(height: 44)
             .padding(.horizontal)
-            .padding(.top)
             
-            // Content area - LIVE EDITING
+            // Content area - Larger
             if showPreview {
-                // Rendered preview
                 LiveMarkdownPreview(text: noteText)
-                    .frame(height: 240)
+                    .frame(height: 280)
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
@@ -260,10 +260,10 @@ Type and watch the **live syntax highlighting** ✨
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
                     .padding(.horizontal)
+                    .padding(.top, 8)
             } else {
-                // Live markdown editor with syntax highlighting
                 LiveMarkdownEditor(text: $noteText)
-                    .frame(height: 240)
+                    .frame(height: 280)
                     .background(Color(NSColor.textBackgroundColor))
                     .cornerRadius(8)
                     .overlay(
@@ -271,9 +271,10 @@ Type and watch the **live syntax highlighting** ✨
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
                     .padding(.horizontal)
+                    .padding(.top, 8)
             }
             
-            // Footer with stats
+            // Footer - Fixed height
             HStack(spacing: 8) {
                 HStack(spacing: 4) {
                     Image(systemName: "character")
@@ -320,8 +321,11 @@ Type and watch the **live syntax highlighting** ✨
                 }
                 .buttonStyle(.plain)
             }
+            .frame(height: 40)
             .padding(.horizontal)
-            .padding(.bottom, 8)
+            .padding(.top, 8)
+            
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.controlBackgroundColor))
