@@ -342,30 +342,33 @@ struct CameraPanel: View {
 
 // MARK: - Notepad Panel
 struct NotepadPanel: View {
-    @State private var noteText = """
+    @AppStorage("notepadText") private var noteText = """
 # Welcome to QuickHub Notes
 
-## Markdown Features
-- **Bold text** with double asterisks
-- *Italic text* with single asterisks  
-- `Inline code` with backticks
-- > Blockquotes with >
+## Type and see live formatting!
 
-## Lists
-1. Numbered items
-2. Work great
-3. Try it out!
+**Bold text** renders immediately
+*Italic text* too!
 
+### Lists work automatically:
 - Bullet points
-- Also supported
-- With live highlighting!
+- Look great
+- Try it yourself!
 
-## Try It
-Type and watch the **live syntax highlighting** ✨
+1. Numbered lists
+2. Also render
+3. In real-time
 
-[Links work too](https://github.com)
+> Quotes look professional
+
+`Code snippets` stand out
+
+[Links](https://github.com) are clickable!
+
+---
+
+Just type naturally - markdown renders as you type! ✨
 """
-    @State private var showPreview = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -378,50 +381,27 @@ Type and watch the **live syntax highlighting** ✨
                     .font(.headline)
                 Spacer()
                 
-                // Mode toggle
-                Button(action: { showPreview.toggle() }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: showPreview ? "eye.slash.fill" : "eye.fill")
-                        Text(showPreview ? "Edit" : "Preview")
-                    }
+                // Word count
+                Text("\(noteText.split(separator: " ").count) words")
                     .font(.caption)
-                    .foregroundColor(showPreview ? .secondary : .orange)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(showPreview ? Color.gray.opacity(0.1) : Color.orange.opacity(0.1))
-                    .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
             }
             .frame(height: 44)
             .padding(.horizontal)
             
-            // Content area - Larger
-            if showPreview {
-                LiveMarkdownPreview(text: noteText)
-                    .frame(height: 280)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-            } else {
-                LiveMarkdownEditor(text: $noteText)
-                    .frame(height: 280)
-                    .background(Color(NSColor.textBackgroundColor))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-            }
+            // Live rendered markdown editor
+            LiveMarkdownTextEditor(text: $noteText)
+                .frame(height: 280)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                )
+                .padding(.horizontal)
+                .padding(.top, 8)
             
-            // Footer - Fixed height
+            // Footer with stats
             HStack(spacing: 8) {
                 HStack(spacing: 4) {
                     Image(systemName: "character")
@@ -439,18 +419,6 @@ Type and watch the **live syntax highlighting** ✨
                     Image(systemName: "text.alignleft")
                         .font(.caption2)
                     Text("\(noteText.split(separator: "\n").count)")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-                
-                Text("•")
-                    .foregroundColor(.secondary)
-                    .font(.caption)
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.text")
-                        .font(.caption2)
-                    Text("\(noteText.split(separator: " ").count) words")
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -477,8 +445,4 @@ Type and watch the **live syntax highlighting** ✨
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.controlBackgroundColor))
     }
-}
-
-#Preview {
-    ContentView()
 }

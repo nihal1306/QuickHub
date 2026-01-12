@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 @main
 struct QuickHubApp: App {
@@ -6,75 +7,113 @@ struct QuickHubApp: App {
     
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsView()
+        }
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About QuickHub") {
+                    showAboutWindow()
+                }
+            }
         }
     }
-}
-
-class AppDelegate: NSObject, NSApplicationDelegate {
-    var statusItem: NSStatusItem?
-    var popover: NSPopover?
-    var eventMonitor: EventMonitor?
-    var escapeKeyMonitor: Any?
     
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        // Create the menu bar icon
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "QuickHub")
-            button.action = #selector(togglePopover)
-        }
-        
-        // Create the popover
-        popover = NSPopover()
-        popover?.contentSize = NSSize(width: 900, height: 400)
-        popover?.behavior = .applicationDefined  // ← CHANGE THIS LINE
-        popover?.contentViewController = NSHostingController(rootView: ContentView())
-        
-        // Monitor clicks outside the popover - REMOVE OR COMMENT OUT
-        // eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-        //     if let strongSelf = self, strongSelf.popover?.isShown == true {
-        //         strongSelf.closePopover()
-        //     }
-        // }
+    func showAboutWindow() {
+        let alert = NSAlert()
+        alert.messageText = "QuickHub"
+        alert.informativeText = "Version 1.0.0\n\nA modern menu bar app for quick access to files, camera, and notes.\n\nBuilt with ❤️ and a questionable amount of ☕"
+        alert.alertStyle = .informational
+        alert.runModal()
     }
     
-    @objc func togglePopover() {
-        if let button = statusItem?.button {
+    class AppDelegate: NSObject, NSApplicationDelegate {
+        var statusItem: NSStatusItem?
+        var popover: NSPopover?
+        var eventMonitor: EventMonitor?
+        var escapeKeyMonitor: Any?
+        
+        func applicationDidFinishLaunching(_ notification: Notification) {
+            // Create the menu bar icon
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+            
+            if let button = statusItem?.button {
+                button.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "QuickHub")
+                button.action = #selector(handleStatusItemClick)
+                button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            }
+            
+            // Create the popover
+            popover = NSPopover()
+            popover?.contentSize = NSSize(width: 900, height: 400)
+            popover?.behavior = .applicationDefined
+            popover?.contentViewController = NSHostingController(rootView: ContentView())
+        }
+        
+        @objc func handleStatusItemClick(_ sender: NSStatusBarButton) {
+            let event = NSApp.currentEvent!
+            
+            if event.type == .rightMouseUp {
+                // Right click - show menu
+                let menu = NSMenu()
+                menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+                menu.addItem(NSMenuItem.separator())
+                menu.addItem(NSMenuItem(title: "Quit QuickHub", action: #selector(quitApp), keyEquivalent: "q"))
+                
+                statusItem?.menu = menu
+                statusItem?.button?.performClick(nil)
+                statusItem?.menu = nil
+            } else {
+                // Left click - toggle popover
+                togglePopover()
+            }
+        }
+        
+        @objc func togglePopover() {
             if popover?.isShown == true {
                 closePopover()
             } else {
                 showPopover()
             }
         }
-    }
-    
-    func showPopover() {
-        if let button = statusItem?.button {
-            popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            // eventMonitor?.start()  // ← COMMENT THIS OUT OR REMOVE
-            popover?.contentViewController?.view.window?.makeKey()
-            
-            // Local escape key monitor
-            escapeKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-                if event.keyCode == 53 { // Escape key
-                    self?.closePopover()
-                    return nil
+        
+        @objc func openSettings() {
+            if #available(macOS 13.0, *) {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            } else {
+                // Fallback for older macOS
+                NSApp.orderFrontStandardAboutPanel(nil)
+            }
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        
+        @objc func quitApp() {
+            NSApplication.shared.terminate(nil)
+        }
+        
+        func showPopover() {
+            if let button = statusItem?.button {
+                popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+                popover?.contentViewController?.view.window?.makeKey()
+                
+                // Local escape key monitor
+                escapeKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                    if event.keyCode == 53 { // Escape key
+                        self?.closePopover()
+                        return nil
+                    }
+                    return event
                 }
-                return event
             }
         }
-    }
-    
-    func closePopover() {
-        popover?.performClose(nil)
-        // eventMonitor?.stop()  // ← COMMENT THIS OUT OR REMOVE
         
-        // Remove escape key monitor
-        if let monitor = escapeKeyMonitor {
-            NSEvent.removeMonitor(monitor)
-            escapeKeyMonitor = nil
+        func closePopover() {
+            popover?.performClose(nil)
+            
+            // Remove escape key monitor
+            if let monitor = escapeKeyMonitor {
+                NSEvent.removeMonitor(monitor)
+                escapeKeyMonitor = nil
+            }
         }
     }
     
