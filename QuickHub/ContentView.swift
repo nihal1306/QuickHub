@@ -25,6 +25,9 @@ struct ContentView: View {
 
 // MARK: - File Dock Panel
 struct FileDockPanel: View {
+    @StateObject private var fileManager = FileDockManager()
+    @State private var isDragging = false
+    
     var body: some View {
         VStack(spacing: 0) {
             // Header - Fixed height
@@ -35,32 +38,99 @@ struct FileDockPanel: View {
                 Text("File Dock")
                     .font(.headline)
                 Spacer()
+                
+                // File count badge
+                if !fileManager.files.isEmpty {
+                    Text("\(fileManager.files.count)")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.blue)
+                        .cornerRadius(10)
+                }
             }
             .frame(height: 44)
             .padding(.horizontal)
             
-            // Drop zone - Larger, fills space
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.blue.opacity(0.1))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.blue.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [10]))
-                    )
-                
-                VStack(spacing: 12) {
-                    Image(systemName: "arrow.down.doc.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.blue.opacity(0.5))
-                    Text("Drop files here")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Text("Temporary storage")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+            // Content area
+            if fileManager.files.isEmpty {
+                // Drop zone when empty
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(isDragging ? Color.blue.opacity(0.2) : Color.blue.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    isDragging ? Color.blue : Color.blue.opacity(0.3),
+                                    style: StrokeStyle(lineWidth: isDragging ? 3 : 2, dash: [10])
+                                )
+                        )
+                    
+                    VStack(spacing: 12) {
+                        Image(systemName: "arrow.down.doc.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.blue.opacity(isDragging ? 0.8 : 0.5))
+                        Text("Drop files here")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Text("Temporary storage")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .frame(height: 280)
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .onDrop(of: [.fileURL], isTargeted: $isDragging) { providers in
+                    handleDrop(providers: providers)
+                    return true
+                }
+            } else {
+                // File list when files present
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(fileManager.files) { file in
+                            FileRowView(file: file, fileManager: fileManager)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                }
+                .frame(height: 280)
+                .background(Color(NSColor.textBackgroundColor))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isDragging ? Color.blue : Color.gray.opacity(0.2), lineWidth: isDragging ? 2 : 1)
+                )
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .onDrop(of: [.fileURL], isTargeted: $isDragging) { providers in
+                    handleDrop(providers: providers)
+                    return true
                 }
             }
-            .frame(height: 280)
+            
+            // Footer with Clear All button
+            HStack {
+                if !fileManager.files.isEmpty {
+                    Button(action: {
+                        fileManager.clearAll()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "trash")
+                                .font(.caption2)
+                            Text("Clear All")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+            .frame(height: 40)
             .padding(.horizontal)
             .padding(.top, 8)
             
@@ -69,8 +139,85 @@ struct FileDockPanel: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.controlBackgroundColor))
     }
+    
+    // MARK: - Handle Drop
+    private func handleDrop(providers: [NSItemProvider]) -> Bool {
+        for provider in providers {
+            provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { (urlData, error) in
+                DispatchQueue.main.async {
+                    if let data = urlData as? Data,
+                       let url = URL(dataRepresentation: data, relativeTo: nil) {
+                        fileManager.addFiles(from: [url])
+                    }
+                }
+            }
+        }
+        return true
+    }
 }
 
+// MARK: - File Row View
+struct FileRowView: View {
+    let file: StoredFile
+    let fileManager: FileDockManager
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // File icon
+            Image(systemName: file.fileIcon)
+                .font(.title2)
+                .foregroundColor(.blue)
+                .frame(width: 32)
+            
+            // File info
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.name)
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .foregroundColor(.primary)
+                
+                Text(file.sizeString)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // Actions
+            HStack(spacing: 8) {
+                // Open button
+                Button(action: {
+                    fileManager.openFile(file)
+                }) {
+                    Image(systemName: "arrow.up.forward.square")
+                        .font(.system(size: 14))
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+                .help("Open file")
+                
+                // Delete button
+                Button(action: {
+                    fileManager.removeFile(file)
+                }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .help("Delete file")
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            fileManager.openFile(file)
+        }
+    }
+}
 // MARK: - Camera Panel
 struct CameraPanel: View {
     @StateObject private var cameraManager = CameraManager()

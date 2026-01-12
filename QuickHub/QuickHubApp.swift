@@ -29,15 +29,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Create the popover
         popover = NSPopover()
         popover?.contentSize = NSSize(width: 900, height: 400)
-        popover?.behavior = .transient
+        popover?.behavior = .applicationDefined  // ← CHANGE THIS LINE
         popover?.contentViewController = NSHostingController(rootView: ContentView())
         
-        // Monitor clicks outside the popover
-        eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            if let strongSelf = self, strongSelf.popover?.isShown == true {
-                strongSelf.closePopover()
-            }
-        }
+        // Monitor clicks outside the popover - REMOVE OR COMMENT OUT
+        // eventMonitor = EventMonitor(mask: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+        //     if let strongSelf = self, strongSelf.popover?.isShown == true {
+        //         strongSelf.closePopover()
+        //     }
+        // }
     }
     
     @objc func togglePopover() {
@@ -53,7 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func showPopover() {
         if let button = statusItem?.button {
             popover?.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            eventMonitor?.start()
+            // eventMonitor?.start()  // ← COMMENT THIS OUT OR REMOVE
             popover?.contentViewController?.view.window?.makeKey()
             
             // Local escape key monitor
@@ -69,7 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func closePopover() {
         popover?.performClose(nil)
-        eventMonitor?.stop()
+        // eventMonitor?.stop()  // ← COMMENT THIS OUT OR REMOVE
         
         // Remove escape key monitor
         if let monitor = escapeKeyMonitor {
@@ -77,30 +77,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             escapeKeyMonitor = nil
         }
     }
-}
-
-class EventMonitor {
-    private var monitor: Any?
-    private let mask: NSEvent.EventTypeMask
-    private let handler: (NSEvent?) -> Void
     
-    init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
-        self.mask = mask
-        self.handler = handler
-    }
-    
-    deinit {
-        stop()
-    }
-    
-    func start() {
-        monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
-    }
-    
-    func stop() {
-        if monitor != nil {
-            NSEvent.removeMonitor(monitor!)
-            monitor = nil
+    class EventMonitor {
+        private var monitor: Any?
+        private let mask: NSEvent.EventTypeMask
+        private let handler: (NSEvent?) -> Void
+        
+        init(mask: NSEvent.EventTypeMask, handler: @escaping (NSEvent?) -> Void) {
+            self.mask = mask
+            self.handler = handler
+        }
+        
+        deinit {
+            stop()
+        }
+        
+        func start() {
+            monitor = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler)
+        }
+        
+        func stop() {
+            if monitor != nil {
+                NSEvent.removeMonitor(monitor!)
+                monitor = nil
+            }
         }
     }
 }
