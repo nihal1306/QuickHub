@@ -218,6 +218,7 @@ struct FileRowView: View {
         }
     }
 }
+
 // MARK: - Camera Panel
 struct CameraPanel: View {
     @StateObject private var cameraManager = CameraManager()
@@ -342,55 +343,51 @@ struct CameraPanel: View {
 
 // MARK: - Notepad Panel
 struct NotepadPanel: View {
-    @AppStorage("notepadText") private var noteText = """
-# Welcome to QuickHub Notes
-
-## Type and see live formatting!
-
-**Bold text** renders immediately
-*Italic text* too!
-
-### Lists work automatically:
-- Bullet points
-- Look great
-- Try it yourself!
-
-1. Numbered lists
-2. Also render
-3. In real-time
-
-> Quotes look professional
-
-`Code snippets` stand out
-
-[Links](https://github.com) are clickable!
-
----
-
-Just type naturally - markdown renders as you type! ✨
-"""
+    @State private var noteText: NSAttributedString = {
+        if let data = UserDefaults.standard.data(forKey: "notepadRichText"),
+           let attributedString = try? NSAttributedString(
+            data: data,
+            options: [.documentType: NSAttributedString.DocumentType.rtf],
+            documentAttributes: nil
+           ) {
+            return attributedString
+        }
+        
+        let defaultText = "Welcome to QuickHub Notes!\n\nSmart Auto-Formatting:\n- Type \"- \" for bullets\n1. Type \"1. \" for numbers\n\nKeyboard Shortcuts:\nCmd+B for bold\nCmd+I for italic\nCmd+U for underline\n\nTry it below!"
+        
+        let attributed = NSMutableAttributedString(string: defaultText)
+        attributed.addAttribute(.font, value: NSFont.systemFont(ofSize: 14), range: NSRange(location: 0, length: attributed.length))
+        return attributed
+    }()
+    
+    var characterCount: Int {
+        noteText.string.count
+    }
+    
+    var wordCount: Int {
+        noteText.string.split(separator: " ").count
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header - Fixed height
+            // Header
             HStack {
-                Image(systemName: "doc.text.fill")
+                Image(systemName: "note.text")
                     .font(.title2)
                     .foregroundColor(.orange)
-                Text("Scratchpad")
+                Text("Notes")
                     .font(.headline)
                 Spacer()
                 
-                // Word count
-                Text("\(noteText.split(separator: " ").count) words")
-                    .font(.caption)
+                Text("\(characterCount)")
+                    .font(.system(size: 12, weight: .medium, design: .monospaced))
                     .foregroundColor(.secondary)
             }
             .frame(height: 44)
             .padding(.horizontal)
             
-            // Live rendered markdown editor
-            LiveMarkdownTextEditor(text: $noteText)
+            // Text editor
+            EnhancedTextEditor(text: $noteText)
                 .frame(height: 280)
                 .background(Color(NSColor.textBackgroundColor))
                 .cornerRadius(8)
@@ -400,32 +397,19 @@ Just type naturally - markdown renders as you type! ✨
                 )
                 .padding(.horizontal)
                 .padding(.top, 8)
+                .onChange(of: noteText) { newValue in
+                    saveNoteText(newValue)
+                }
             
-            // Footer with stats
+            // Footer
             HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    Image(systemName: "character")
-                        .font(.caption2)
-                    Text("\(noteText.count)")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-                
-                Text("•")
-                    .foregroundColor(.secondary)
+                Text("\(wordCount) words")
                     .font(.caption)
-                
-                HStack(spacing: 4) {
-                    Image(systemName: "text.alignleft")
-                        .font(.caption2)
-                    Text("\(noteText.split(separator: "\n").count)")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
+                    .foregroundColor(.secondary)
                 
                 Spacer()
                 
-                Button(action: { noteText = "" }) {
+                Button(action: { clearNote() }) {
                     HStack(spacing: 4) {
                         Image(systemName: "trash")
                             .font(.caption2)
@@ -445,4 +429,30 @@ Just type naturally - markdown renders as you type! ✨
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.controlBackgroundColor))
     }
+    
+    private func saveNoteText(_ attributedString: NSAttributedString) {
+        if let data = try? attributedString.data(
+            from: NSRange(location: 0, length: attributedString.length),
+            documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf]
+        ) {
+            UserDefaults.standard.set(data, forKey: "notepadRichText")
+        }
+    }
+    
+    private func clearNote() {
+        let alert = NSAlert()
+        alert.messageText = "Clear Note?"
+        alert.informativeText = "This will delete all text in your note."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Clear")
+        
+        if alert.runModal() == .alertSecondButtonReturn {
+            noteText = NSAttributedString(string: "")
+        }
+    }
+}
+
+#Preview {
+    ContentView()
 }
